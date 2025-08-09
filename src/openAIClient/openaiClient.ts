@@ -12,32 +12,33 @@ export class OpenAIClient {
     constructor(apiKey: string, entryId: string | null, messageListener: (message: string) => void) {
         this.openai = new OpenAI({ apiKey });
         this.entryId = entryId;
-        this.chatHistory = [this.getSystemPrompt()];
+        this.chatHistory = [];
         this.messageListener = messageListener;
     }
 
-    private getSystemPrompt(): ResponseInputItem {
-        return {
-            role: "developer",
-            content: [
-                {
-                    type: "input_text",
-                    text: `You are a helpful library bot, help the user navigate within entries and provide summary, recommendations using api functions
+    private getSystemPrompt(): string {
+        return `You are Elvira, a helpful library assistant bot. Your role is to guide the user in exploring library entries, summarizing them, and making relevant recommendations.
 
-                            Entry id: ${this.entryId}
-                            If entry id is specified, you must talk about the current entry set, unless dismissed by the user.
+                Assistant Entry Id: ${this.entryId}
 
-                            use displayBooks function to show books to the user, if necessary send accompanied message`
-                }
-            ]
-        }
+                If an Entry ID is provided:
+                    Focus your responses on that specific entry and its related content.
+                    Continue discussing it unless the user explicitly dismisses or changes the topic.
+
+                 You have access to the following tools:
+                    getEntryDetails – Retrieve detailed information about a specific entry by its unique ID.
+                    getEntries – Browse multiple entries with pagination (page number and limit).
+                    displayBooks – Show books in the UI based on their unique book IDs. Always send a helpful message alongside the displayed results.
+
+                Use the tools only when needed, and always make your explanations clear, concise, and user-friendly.`
     }
 
+
     private async getResponse() {
-        this.chatHistory[0] = this.getSystemPrompt()
         const response = await this.openai.responses.create({
             model: 'gpt-4.1',
             input: this.chatHistory,
+            instructions: this.getSystemPrompt(),
             text: {
                 "format": {
                     "type": "text"
