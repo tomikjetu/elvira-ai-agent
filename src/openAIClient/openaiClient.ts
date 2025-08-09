@@ -8,12 +8,21 @@ export class OpenAIClient {
     private openai: OpenAI;
     private chatHistory: ResponseInput;
     private messageListener: (message: string) => void;
+    public displayBooksListener: (bookIds: string[]) => void;
 
-    constructor(apiKey: string, entryId: string | null, messageListener: (message: string) => void) {
-        this.openai = new OpenAI({ apiKey });
+    constructor(entryId: string | null, listeners: {
+        messageListener: (message: string) => void;
+        displayBooksListener: (bookIds: string[]) => void;
+    }) {
+        this.openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
         this.entryId = entryId;
         this.chatHistory = [];
-        this.messageListener = messageListener;
+        this.messageListener = listeners.messageListener;
+        this.displayBooksListener = listeners.displayBooksListener;
+    }
+
+    public getChatHistory(): ResponseInput {
+        return this.chatHistory;
     }
 
     private getSystemPrompt(): string {
@@ -71,9 +80,9 @@ export class OpenAIClient {
         }
 
         if (functionCallStack.length > 0) {
-            const functionOutput = await handleFunctionCalls(functionCallStack as ResponseFunctionToolCall[]);
+            const functionOutput = await handleFunctionCalls(this, functionCallStack as ResponseFunctionToolCall[]);
             this.chatHistory.push(...functionOutput);
-            this.getResponse();
+            await this.getResponse();
         }
 
     }
@@ -88,6 +97,6 @@ export class OpenAIClient {
                 }
             ]
         });
-        this.getResponse();
+        await this.getResponse();
     }
 }
