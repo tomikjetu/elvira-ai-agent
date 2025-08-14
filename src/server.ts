@@ -1,15 +1,21 @@
 import express from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { OpenAIClient } from './openAIClient/openaiClient';
+import bodyParser from 'body-parser';
+import cors from 'cors';
 
 const app = express();
-app.use(express.json());
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(cors({
+    origin: '*'
+}));
 
 // In-memory chat session store
 const chatSessions: Record<string, OpenAIClient> = {};
 const messagesQueue: Record<string, {
-    type: 'message' | 'books',
-    content: string | string[]
+    type: 'message' | 'entries',
+    data: string | string[]
 }[]> = {};
 
 function getMessagesFromQueue(chatId: string) {
@@ -21,14 +27,16 @@ function getMessagesFromQueue(chatId: string) {
 
 app.post('/api/startchat', (req, res) => {
     const chatId = uuidv4();
+    console.log(`First message at ${chatId}`)
     const { entryId } = req.body;
     messagesQueue[chatId] = [];
     chatSessions[chatId] = new OpenAIClient(entryId, {
         messageListener: (message) => {
-            messagesQueue[chatId].push({ type: 'message', content: message });
+            console.log(`Agent@${chatId}:`, message);
+            messagesQueue[chatId].push({ type: 'message', data: message });
         },
         displayBooksListener: (bookIds) => {
-            messagesQueue[chatId].push({ type: 'books', content: bookIds });
+            messagesQueue[chatId].push({ type: 'entries', data: bookIds });
         }
     })
     res.json({ chatId });
@@ -38,8 +46,8 @@ app.post('/api/startchat', (req, res) => {
 app.post('/api/sendchat', async (req, res) => {
     const { chatId, message, entryId } = req.body;
 
-    if (!chatId || !message || !entryId) {
-        return res.status(400).json({ error: 'chatId, message, and entryId are required' });
+    if (!chatId || !message) {
+        return res.status(400).json({ error: 'chatId, message are required' });
     }
 
     const chatSession = chatSessions[chatId];
@@ -47,6 +55,8 @@ app.post('/api/sendchat', async (req, res) => {
         return res.status(404).json({ error: 'Chat session not found' });
     }
 
+    chatSession.setEntryId(entryId);
+    console.log(`User@${chatId}:`, message);
     await chatSession.chat(message);
     const messages = getMessagesFromQueue(chatId);
 

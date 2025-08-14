@@ -28,6 +28,8 @@ export class OpenAIClient {
     private getSystemPrompt(): string {
         return `You are Elvira, a helpful library assistant bot. Your role is to guide the user in exploring library entries, summarizing them, and making relevant recommendations.
 
+                When recommending a book, use the displayBooks function. Always keep the message short and brief, answer only what was asked.
+
                 Assistant Entry Id: ${this.entryId}
 
                 If an Entry ID is provided:
@@ -98,5 +100,9 @@ export class OpenAIClient {
             ]
         });
         await this.getResponse();
+    }
+
+    public setEntryId(entryId: string | null) {
+        this.entryId = entryId;
     }
 }

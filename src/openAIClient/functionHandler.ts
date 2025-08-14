@@ -4,6 +4,7 @@ import { elviraClient } from "../elviraClient";
 
 async function displayBooks(client: OpenAIClient, options: { ids: string[] }) {
     client.displayBooksListener(options.ids);
+    return { success: true };
 }
 
 async function getEntries(options: { page: number, limit: number }) {
@@ -37,7 +38,7 @@ export async function handleFunctionCalls(client: OpenAIClient, functionCallStac
         output.push({
             type: "function_call_output",
             call_id: item.call_id,
-            output: JSON.stringify(result)
+            output: JSON.stringify(result || {success: false, error: 'Unknown error occurred'})
         });
     }
     return output;
