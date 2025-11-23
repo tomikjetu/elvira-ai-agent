@@ -11,28 +11,32 @@ export async function handleFunctionCalls(client: OpenAIClient, functionCallStac
     for (const item of functionCallStack) {
         const options = JSON.parse(item.arguments);
         var result;
-        switch (item.name) {
-            case "displayBooks":
-                result = await displayBooks(client, options);
-                break;
-            case "getEntries":
-                // TODO: validate options
-                result = await client.elviraClient.getEntries(options.page, options.limit);
-                break;
-            case "getEntryDetails":
-                // todo validate options
-                result = await client.elviraClient.getEntryDetail(options.id);
-                break;
-            default:
-                result = { success: false, error: "Unknown function call" };
-                console.log("Unknown function call:", item.name);
-                break;
+        try {
+            switch (item.name) {
+                case "displayBooks":
+                    result = await displayBooks(client, options);
+                    break;
+                case "getEntries":
+                    // TODO: validate options
+                    result = await client.elviraClient.getEntries(options.page, options.limit);
+                    break;
+                case "getEntryDetails":
+                    // todo validate options
+                    result = await client.elviraClient.getEntryDetail(options.id);
+                    break;
+                default:
+                    result = { success: false, error: "Unknown function call" };
+                    console.log("Unknown function call:", item.name);
+                    break;
+            }
+            output.push({
+                type: "function_call_output",
+                call_id: item.call_id,
+                output: JSON.stringify(result || {success: false, error: 'Unknown error occurred'})
+            });
+        } catch (error) {
+            console.error("Error handling function call:", error);
         }
-        output.push({
-            type: "function_call_output",
-            call_id: item.call_id,
-            output: JSON.stringify(result || {success: false, error: 'Unknown error occurred'})
-        });
     }
     return output;
 }
